@@ -6,24 +6,39 @@
 
  let products = [];
 
- // récupération de l'ensemble du catalogue de produits à partir de l'API
- products = fetch(`http://localhost:3000/api/products/`)
-     // transformation du retour de l'API en tableau
-     .then(data => data.json())
-     //  .then(data => console.log("cart23", data))
-     .then(productsList => {
-         // variable globale products : permet d'avoir les détails des produits de l'API
-         products = productsList;
-         // on appelle display Cart pour l'affichage
-         displayCart();
-     });
+ // je récupère les informations du localstorage
+ function getCart() {
+     let cart = localStorage.getItem("productSelected");
+     if (cart == null) {
+         return [];
+     } else {
+         return JSON.parse(cart);
+     }
+ }
+
+ function init() {
+     // récupération de l'ensemble du catalogue de produits à partir de l'API
+     products = fetch(`http://localhost:3000/api/products/`)
+         // transformation du retour de l'API en tableau
+         .then(data => data.json())
+         //  .then(data => console.log("cart23", data))
+         .then(productsList => {
+             // variable globale products : permet d'avoir les détails des produits de l'API
+             products = productsList;
+             // on appelle display Cart pour l'affichage
+             displayCart();
+         });
+ }
 
  function displayCart() {
+     cart__items.innerHTML = "";
      cart2 = JSON.parse(localStorage.getItem("productSelected"));
      console.log("cart2", cart2);
+     let totalProducts = 0;
+     let totalQuantity = 0;
      cart2.forEach((cartProduct) => {
          const productEx = products.find((product) => product._id == cartProduct.idProduct);
-         //  console.log("test2", productEx);
+         console.log("test2", productEx);
          const items = document.querySelector("#cart__items");
          // construction du HTML
          const article = document.createElement("article");
@@ -85,9 +100,9 @@
          inputSettingsQuantity.setAttribute("value", cartProduct.quantity)
          divContentSettingsQuantity.appendChild(inputSettingsQuantity);
 
-         //  inputSettingsQuantity.onclick = function (ev) {
-         //      changeQuantity(ev.target.value, cartProduct.idProduct, cartProduct.colors);
-         //  }
+         inputSettingsQuantity.onclick = function (ev) {
+             changeQuantity(ev.target.value, cartProduct.idProduct, cartProduct.colors);
+         }
 
          const divContentSettingsDelete = document.createElement("div");
          divContentSettingsDelete.className = "cart__item__content__settings__delete"
@@ -100,14 +115,47 @@
          pSettingsDelete.onclick = function () {
              removeFromCart(cartProduct.idProduct, cartProduct.colors);
          }
+         totalQuantity += parseInt(cartProduct.quantity);
+         console.log("testpatrick", totalQuantity);
+         totalProducts += parseInt(cartProduct.quantity) * productEx.price;
+         console.log("testpatrick", totalProducts);
      })
+
+     // je place le nombre total d'article dans l'emplacement prévu
+     const showTotalQuantity = document.querySelector("#totalQuantity");
+     showTotalQuantity.textContent = totalQuantity;
+
+     // je place le montant total du panier dans l'emplacement prévu
+     const showTotalPrice = document.querySelector("#totalPrice");
+     showTotalPrice.textContent = totalProducts;
  }
 
- //  // fonction pour suprrimer un élément du panier (LS)
- //  function removeFromCart(productId, color) {
- //      let cart = getCart();
- //      // on filtre dans le panier (cart) par l'ID
- //      cart = cart.filter((p) => ((p.idProduct != productId) || (p.colors != color)));
- //      localStorage.setItem("productSelected", JSON.stringify(cart));
- //      displayCart();
- //  }
+ // on appelle la fonction init
+ init()
+
+
+ // fonction pour suprrimer un élément du panier (LS)
+ function removeFromCart(productId, color) {
+     let cart = getCart();
+     // on filtre dans le panier (cart) par l'ID
+     cart = cart.filter((p) => ((p.idProduct != productId) || (p.colors != color)));
+     localStorage.setItem("productSelected", JSON.stringify(cart));
+     displayCart();
+ }
+
+ // fonction pour changer la quantité d'un élément du panier (LS)
+
+ function changeQuantity(quantity, productId, color) {
+     let cart = getCart();
+     // on cherche dans le panier (cart) par l'ID
+     let foundProduct = cart.find((p) => (p.idProduct == productId) && (p.colors == color));
+
+     if (foundProduct) {
+         if (quantity > 0)
+             foundProduct.quantity = quantity;
+         else
+             removeFromCart(productId);
+     }
+     localStorage.setItem("productSelected", JSON.stringify(cart));
+     displayCart();
+ }
